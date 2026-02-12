@@ -4,9 +4,9 @@ A Streamlit web application for real-time email spam classification
 """
 
 import streamlit as st
-import pickle
+import joblib
 import re
-from pathlib import Path
+import os
 
 # Page configuration
 st.set_page_config(
@@ -71,20 +71,40 @@ st.markdown("""
 # Load model and vectorizer
 @st.cache_resource
 def load_model():
-    """Load the trained model and vectorizer from pickle file"""
+    """Load the trained model and vectorizer from joblib file"""
     try:
-        model_path = Path(__file__).parent / 'Spam_email_classifier.pkl'
-        with open(model_path, 'rb') as file:
-            model_data = pickle.load(file)
+        import joblib
+        import os
         
-        # Handle different pickle formats
+        # Try multiple possible paths for Render deployment
+        possible_paths = [
+            'Spam_email_classifier.pkl',
+            './Spam_email_classifier.pkl',
+            os.path.join(os.path.dirname(__file__), 'Spam_email_classifier.pkl'),
+            os.path.join(os.getcwd(), 'Spam_email_classifier.pkl')
+        ]
+        
+        model_path = None
+        for path in possible_paths:
+            if os.path.exists(path):
+                model_path = path
+                break
+        
+        if model_path is None:
+            st.error("❌ Model file not found! Please ensure 'Spam_email_classifier.pkl' is in the same directory.")
+            st.stop()
+        
+        # Load using joblib
+        model_data = joblib.load(model_path)
+        
+        # Handle different formats
         if isinstance(model_data, dict):
             return model_data.get('model'), model_data.get('vectorizer')
         elif isinstance(model_data, tuple):
             return model_data[0], model_data[1]
         else:
             # Assume it's just the model
-            st.warning("Vectorizer not found in pickle file. Using default CountVectorizer.")
+            st.warning("Vectorizer not found in file. Using default CountVectorizer.")
             from sklearn.feature_extraction.text import CountVectorizer
             vectorizer = CountVectorizer()
             return model_data, vectorizer
