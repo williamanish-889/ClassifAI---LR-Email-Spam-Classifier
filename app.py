@@ -99,15 +99,22 @@ def load_model():
         
         # Handle different formats
         if isinstance(model_data, dict):
-            return model_data.get('model'), model_data.get('vectorizer')
+            model = model_data.get('model')
+            vectorizer = model_data.get('vectorizer')
+            if vectorizer is None:
+                st.error("❌ Vectorizer not found in model file. Please retrain and save the model with the vectorizer together.")
+                st.stop()
+            return model, vectorizer
         elif isinstance(model_data, tuple):
-            return model_data[0], model_data[1]
+            model, vectorizer = model_data[0], model_data[1]
+            if vectorizer is None:
+                st.error("❌ Vectorizer not found in model file. Please retrain and save the model with the vectorizer together.")
+                st.stop()
+            return model, vectorizer
         else:
-            # Assume it's just the model
-            st.warning("Vectorizer not found in file. Using default CountVectorizer.")
-            from sklearn.feature_extraction.text import CountVectorizer
-            vectorizer = CountVectorizer()
-            return model_data, vectorizer
+            # Assume it's just the model - this is problematic
+            st.error("❌ Model file format is invalid. The file should contain both the trained model and the fitted vectorizer. Please retrain the model and save it properly using joblib.save({'model': model, 'vectorizer': vectorizer}, 'Spam_email_classifier.pkl')")
+            st.stop()
     except FileNotFoundError:
         st.error("❌ Model file not found! Please ensure 'Spam_email_classifier.pkl' is in the same directory.")
         st.stop()
